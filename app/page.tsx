@@ -708,7 +708,7 @@ export default function Home() {
                             bodyColor: '#E5E7EB',
                             titleFont: {
                               size: 14,
-                              weight: '600',
+                              weight: 'bold',
                               family: 'Inter, sans-serif',
                             },
                             bodyFont: {
@@ -720,7 +720,6 @@ export default function Home() {
                             padding: 12,
                             displayColors: true,
                             usePointStyle: true,
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                             callbacks: {
                               label: function(context: any) {
                                 const label = context.label || '';
@@ -782,6 +781,22 @@ export default function Home() {
                           chart.setActiveElements([]);
                           chart.update();
                         },
+                        onClick: (event: ChartEvent, elements: any[]) => {
+                          if (elements?.[0]) {
+                            const { datasetIndex = 0, index = 0 } = elements[0];
+                            const chart = (event.native?.target as any)?.chart;
+                            if (!chart) return;
+                            
+                            const meta = chart.getDatasetMeta(datasetIndex);
+                            if (!meta?.data?.[index]) return;
+                            
+                            const chartElement = meta.data[index] as any;
+                            chartElement.hidden = chartElement.hidden === null 
+                              ? !chart.getDataVisibility(index) 
+                              : null;
+                            chart.update();
+                          }
+                        },
                         plugins: {
                           legend: {
                             position: 'right',
@@ -791,14 +806,13 @@ export default function Home() {
                               font: {
                                 size: 14,
                                 family: 'Inter, sans-serif',
-                                weight: 'bold' as const,
+                                weight: 500,
                               },
                               usePointStyle: true,
                               pointStyle: 'circle',
                               boxWidth: 8,
                               boxHeight: 8,
-                            },
-                            onClick: (e: MouseEvent, legendItem: any, legend: any) => {
+                            }
                               const index = legendItem?.datasetIndex ?? 0;
                               const chart = legend?.chart;
                               if (!chart) return;
@@ -813,21 +827,58 @@ export default function Home() {
                               chart.update();
                             }
                           },
-                        },
-                        onClick: (event: ChartEvent, elements: ActiveElement[]) => {
-                          if (elements?.[0]) {
-                            const { datasetIndex = 0, index = 0 } = elements[0];
-                            const chart = event.native?.target?.chart;
-                            if (!chart) return;
-                            
-                            const meta = chart.getDatasetMeta(datasetIndex);
-                            if (!meta?.data?.[index]) return;
-                            
-                            const chartElement = meta.data[index] as any;
-                            chartElement.hidden = chartElement.hidden === null 
-                              ? !chart.getDataVisibility(index) 
-                              : null;
-                            chart.update();
+                          tooltip: {
+                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                            titleColor: '#F3F4F6',
+                            bodyColor: '#E5E7EB',
+                            titleFont: {
+                              size: 14,
+                              weight: 'bold',
+                              family: 'Inter, sans-serif',
+                            },
+                            bodyFont: {
+                              size: 13,
+                              family: 'Inter, sans-serif',
+                            },
+                            borderColor: 'rgba(75, 85, 99, 0.5)',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            usePointStyle: true,
+                            callbacks: {
+                              label: function(context: any) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} files (${percentage}%)`;
+                              },
+                              labelColor: function(context: any) {
+                                return {
+                                  borderColor: 'transparent',
+                                  backgroundColor: context.dataset.backgroundColor[context.dataIndex],
+                                  borderRadius: 2,
+                                };
+                              },
+                            },
+                          },
+                          datalabels: {
+                            formatter: (value: number, context: any) => {
+                              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                              const percentage = Math.round((value / total) * 100);
+                              return percentage >= 5 ? `${percentage}%` : '';
+                            },
+                            color: '#F9FAFB',
+                            font: {
+                              weight: 'bold',
+                              size: 13,
+                              family: 'Inter, sans-serif',
+                            },
+                            textAlign: 'center',
+                            textShadowBlur: 8,
+                            textShadowColor: 'rgba(0, 0, 0, 0.8)',
+                            textStrokeColor: 'rgba(0, 0, 0, 0.5)',
+                            textStrokeWidth: 1,
                           }
                         }
                       }}
