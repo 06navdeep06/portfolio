@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiGithub, FiLinkedin, FiMail, FiExternalLink, FiStar, FiGitBranch } from 'react-icons/fi';
 import { FaInstagram } from 'react-icons/fa';
-import ContactForm from '@/components/ContactForm';
-import { ScrollAnimation, FadeIn, StaggeredContainer, StaggeredItem } from '@/components/animations/ScrollAnimation';
+import ContactForm from '../components/ContactForm';
+import { ScrollAnimation, FadeIn, StaggeredContainer, StaggeredItem } from '../components/animations/ScrollAnimation';
 
 interface Repository {
   id: string;
