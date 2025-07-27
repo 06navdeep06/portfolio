@@ -25,3 +25,11 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+
+.drop-shadow-glow {
+  text-shadow:
+    0 0 8px #6ee7ff,
+    0 0 16px #a78bfa,
+    0 0 32px #f472b6;
+}

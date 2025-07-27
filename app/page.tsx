@@ -6,6 +6,10 @@ import { FiGithub, FiLinkedin, FiMail, FiExternalLink, FiStar, FiGitBranch } fro
 import { FaInstagram } from 'react-icons/fa';
 import ContactForm from '../components/ContactForm';
 import { ScrollAnimation, FadeIn, StaggeredContainer, StaggeredItem } from '../components/animations/ScrollAnimation';
+import { Pie } from 'react-chartjs-2';
+import { Chart, ArcElement, Tooltip, Legend } from 'chart.js';
+
+Chart.register(ArcElement, Tooltip, Legend);
 
 interface Repository {
   id: string;
@@ -193,31 +197,106 @@ export default function Home() {
               </div>
             </ScrollAnimation>
 
-            <ScrollAnimation direction="right">
-              <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-                <h3 className="text-2xl font-bold text-white mb-6">Skills & Expertise</h3>
-                <div className="space-y-4">
-                  {skills.map((skill) => (
-                    <div key={skill.name} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-300 font-medium">{skill.name}</span>
-                        <span className="text-gray-400 text-sm">{skill.level}%</span>
-                      </div>
-                      <div className="w-full bg-gray-700 rounded-full h-2">
-                        <motion.div
-                          className="h-2 rounded-full"
-                          style={{ backgroundColor: skill.color }}
-                          initial={{ width: 0 }}
-                          whileInView={{ width: `${skill.level}%` }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1, delay: 0.2 }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </ScrollAnimation>
+<ScrollAnimation direction="right">
+  <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
+    <h3 className="text-2xl font-bold text-white mb-6">Skills & Expertise</h3>
+    <div className="flex flex-col items-center">
+      <div className="relative">
+        <Pie
+          data={{
+            labels: ['Python', 'JavaScript', 'TypeScript', 'React', 'Node.js'],
+            datasets: [
+              {
+                data: [55, 15, 12, 10, 8],
+                backgroundColor: [
+                  'radial-gradient(circle at 60% 40%, #6ee7ff 0%, #3776AB 100%)', // Python
+                  'radial-gradient(circle at 60% 40%, #fffbe6 0%, #F7DF1E 100%)', // JS
+                  'radial-gradient(circle at 60% 40%, #b3dafe 0%, #3178C6 100%)', // TS
+                  'radial-gradient(circle at 60% 40%, #e0f7fa 0%, #61DAFB 100%)', // React
+                  'radial-gradient(circle at 60% 40%, #a8ffce 0%, #339933 100%)', // Node
+                ],
+                borderColor: [
+                  '#6ee7ff', '#fffbe6', '#b3dafe', '#e0f7fa', '#a8ffce'
+                ],
+                borderWidth: 4,
+                hoverBorderColor: [
+                  '#fff', '#fff', '#fff', '#fff', '#fff'
+                ],
+                hoverOffset: 16,
+                shadowOffsetX: 0,
+                shadowOffsetY: 0,
+                shadowBlur: 30,
+                shadowColor: 'rgba(0,255,255,0.5)',
+              },
+            ],
+          }}
+          options={{
+            plugins: {
+              legend: {
+                labels: {
+                  color: '#fff',
+                  font: { size: 16, weight: 'bold' },
+                  boxWidth: 24,
+                  boxHeight: 24,
+                  padding: 20,
+                  generateLabels: (chart) => {
+                    const data = chart.data;
+                    return data.labels.map((label, i) => ({
+                      text: label,
+                      fillStyle: data.datasets[0].backgroundColor[i],
+                      strokeStyle: '#fff',
+                      lineWidth: 2,
+                      hidden: false,
+                      index: i
+                    }));
+                  }
+                },
+                position: 'bottom',
+              },
+              tooltip: {
+                backgroundColor: 'rgba(30,41,59,0.95)',
+                titleColor: '#fff',
+                bodyColor: '#6ee7ff',
+                borderColor: '#6ee7ff',
+                borderWidth: 2,
+                padding: 16,
+                caretSize: 8,
+                cornerRadius: 8,
+                displayColors: false,
+              },
+            },
+            layout: {
+              padding: 24,
+            },
+            animation: {
+              animateRotate: true,
+              animateScale: true,
+              duration: 1800,
+              easing: 'easeInOutQuart',
+            },
+            cutout: '40%',
+            responsive: true,
+            plugins: {
+              datalabels: false,
+            },
+          }}
+          width={260}
+          height={260}
+        />
+        {/* Holographic Glow Overlay */}
+        <div className="absolute inset-0 pointer-events-none rounded-full" style={{
+          boxShadow: '0 0 60px 10px #6ee7ff, 0 0 120px 40px #a78bfa, 0 0 200px 80px #f472b6',
+          zIndex: 1,
+        }} />
+      </div>
+      <div className="mt-6 text-cyan-200 text-center text-sm drop-shadow-glow">
+        <p>
+          Python is my most dominant language, followed by JavaScript, TypeScript, React, and Node.js.
+        </p>
+      </div>
+    </div>
+  </div>
+</ScrollAnimation>
           </div>
         </div>
       </section>
@@ -375,7 +454,7 @@ export default function Home() {
       <footer className="py-8 px-4 sm:px-6 lg:px-8 border-t border-gray-800">
         <div className="max-w-6xl mx-auto text-center">
           <p className="text-gray-400">
-            © 2024 Navdeep. Built with Next.js and Tailwind CSS.
+            © 2024 Navdeep.
           </p>
         </div>
       </footer>
