@@ -60,44 +60,10 @@ export default function Home() {
         
         if (data.data?.user?.pinnedItems?.nodes) {
           setRepositories(data.data.user.pinnedItems.nodes);
-        } else {
-          // Fallback data if API fails
-          setRepositories([
-            {
-              id: '1',
-              name: 'portfolio',
-              description: 'My personal portfolio website built with Next.js and TypeScript',
-              url: 'https://github.com/06navdeep06/portfolio',
-              primaryLanguage: { name: 'TypeScript', color: '#3178C6' },
-              stargazerCount: 5,
-              forkCount: 2
-            },
-            {
-              id: '2',
-              name: 'react-todo-app',
-              description: 'A modern todo application built with React and local storage',
-              url: 'https://github.com/06navdeep06/react-todo-app',
-              primaryLanguage: { name: 'JavaScript', color: '#F7DF1E' },
-              stargazerCount: 3,
-              forkCount: 1
-            }
-          ]);
         }
       } catch (err) {
-        console.error('Error fetching repositories:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch repositories');
-        // Set fallback data on error
-        setRepositories([
-          {
-            id: '1',
-            name: 'portfolio',
-            description: 'My personal portfolio website built with Next.js and TypeScript',
-            url: 'https://github.com/06navdeep06/portfolio',
-            primaryLanguage: { name: 'TypeScript', color: '#3178C6' },
-            stargazerCount: 5,
-            forkCount: 2
-          }
-        ]);
+        console.warn('Error fetching repositories:', err);
+        setError('Unable to load live GitHub data, showing sample projects');
       } finally {
         setLoading(false);
       }
