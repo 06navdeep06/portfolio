@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environment Variables Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
+        <h1 class="text-2xl font-bold mb-6">Environment Variables Test</h1>
+        
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-3">Fetch Environment Variables from API</h2>
+            <button 
+                id="fetchEnvBtn" 
+                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            >
+                Fetch Environment Variables
+            </button>
+            <div id="apiResult" class="mt-3 p-3 bg-gray-50 rounded border hidden">
+                <pre class="whitespace-pre-wrap"></pre>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-3">Test Login</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input 
+                        type="password" 
+                        id="passwordInput" 
+                        class="w-full p-2 border rounded"
+                        placeholder="Enter admin password"
+                    >
+                </div>
+                <button 
+                    id="loginBtn" 
+                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+                >
+                    Test Login
+                </button>
+                <div id="loginResult" class="mt-3 p-3 rounded hidden"></div>
+            </div>
+        </div>
+
+        <div class="text-sm text-gray-500 mt-8 pt-4 border-t">
+            <p>This is a static HTML page that makes API calls to test environment variables.</p>
+            <p>Check the browser's developer console (F12) for more detailed logs.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fetchEnvBtn = document.getElementById('fetchEnvBtn');
+            const apiResult = document.getElementById('apiResult');
+            const loginBtn = document.getElementById('loginBtn');
+            const passwordInput = document.getElementById('passwordInput');
+            const loginResult = document.getElementById('loginResult');
+
+            // Test fetching environment variables from API
+            fetchEnvBtn.addEventListener('click', async () => {
+                try {
+                    console.log('Fetching environment variables from API...');
+                    const response = await fetch('/api/debug-env');
+                    const data = await response.json();
+                    
+                    console.log('API Response:', data);
+                    
+                    apiResult.querySelector('pre').textContent = JSON.stringify(data, null, 2);
+                    apiResult.classList.remove('hidden');
+                } catch (error) {
+                    console.error('Error fetching environment variables:', error);
+                    apiResult.querySelector('pre').textContent = `Error: ${error.message}`;
+                    apiResult.classList.remove('hidden');
+                }
+            });
+
+            // Test login functionality
+            loginBtn.addEventListener('click', async () => {
+                const password = passwordInput.value.trim();
+                if (!password) {
+                    showLoginResult('Please enter a password', 'bg-yellow-100 text-yellow-800');
+                    return;
+                }
+
+                try {
+                    console.log('Attempting login with password:', password);
+                    const response = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ password })
+                    });
+
+                    const data = await response.json();
+                    console.log('Login response:', data);
+
+                    if (response.ok) {
+                        showLoginResult('Login successful!', 'bg-green-100 text-green-800');
+                    } else {
+                        showLoginResult(`Error: ${data.error || 'Login failed'}`, 'bg-red-100 text-red-800');
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    showLoginResult(`Error: ${error.message}`, 'bg-red-100 text-red-800');
+                }
+            });
+
+            function showLoginResult(message, className) {
+                loginResult.textContent = message;
+                loginResult.className = `mt-3 p-3 rounded ${className}`;
+                loginResult.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
