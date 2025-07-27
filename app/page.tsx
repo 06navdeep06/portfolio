@@ -1,132 +1,237 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { FaGithub, FaInstagram, FaEnvelope, FaStar, FaCodeBranch, FaArrowDown } from 'react-icons/fa';
-import { Chart as ChartJS, ChartEvent, ActiveElement, ChartType, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
-import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
-import { FadeIn, StaggeredContainer, StaggeredItem } from '../components/animations/ScrollAnimation';
-
-// Extend Chart.js types to include missing properties
-declare module 'chart.js' {
-  interface ElementOptions {
-    hidden?: boolean | null;
-  }
-  
-  interface Element<T = any> {
-    hidden?: boolean | null;
-  }
-}
-
-// Register ChartJS components
-ChartJS.register(
+import { 
+  Chart as ChartJS, 
+  registerables, 
   ArcElement, 
   Tooltip, 
   Legend, 
+  DoughnutController, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement, 
+  Title, 
+  Filler,
+  type Chart,
+  type ChartOptions,
+  type Plugin
+} from 'chart.js';
+import { Doughnut } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+import type { DoughnutChartData, DoughnutChartOptions, ChartPlugin } from '@/types/chartjs';
+
+import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { FadeIn, StaggeredContainer, StaggeredItem } from '../components/animations/ScrollAnimation';
+
+// Register Chart.js components with all necessary plugins
+ChartJS.register(
+  ...registerables,
+  ArcElement,
+  Tooltip,
+  Legend,
+  DoughnutController,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Filler,
   ChartDataLabels
 );
 
-// Type for chart event handlers
-type ChartHandler = (event: ChartEvent, elements: ActiveElement[], chart: ChartJS) => void;
-
-// Custom plugins for 3D pie chart effect
-const customPlugins = [
-  // 3D effect
-  {
-    id: '3d',
-    beforeDraw: function(chart: ChartJS) {
-      const { ctx } = chart;
-      const { chartArea: { top, bottom, left, right, width, height } } = chart;
-      
-      // Draw 3D shadow effect
-      const centerX = (left + right) / 2;
-      const centerY = (top + bottom) / 2;
-      const r = Math.min(width, height) * 0.4;
-      
-      // Shadow gradient
-      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, r);
-      gradient.addColorStop(0, 'rgba(0, 0, 0, 0.1)');
-      gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0)');
-      
-      ctx.save();
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY + 10, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      
-      // Draw inner glow
-      ctx.save();
-      ctx.shadowColor = 'rgba(255, 255, 255, 0.3)';
-      ctx.shadowBlur = 20;
-      ctx.shadowOffsetX = -5;
-      ctx.shadowOffsetY = 5;
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, r * 0.7, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.fill();
-      ctx.restore();
-    }
-  },
-  // Center label
-  {
-    id: 'doughnutLabel',
-    afterDraw: (chart: ChartJS) => {
-      const { ctx } = chart;
-      const { chartArea: { top, bottom, left, right, width, height } } = chart;
-      
-      // Draw total in center
-      const total = chart.data.datasets[0].data.reduce((a: number, b: number) => a + b, 0);
-      const centerX = (left + right) / 2;
-      const centerY = (top + bottom) / 2;
-      
-      // Draw outer circle
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
-      ctx.fill();
-      
-      // Add inner glow
-      const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 50);
-      gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
-      gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
-      
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
-      ctx.fillStyle = gradient;
-      ctx.fill();
-      
-      // Draw total text
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillStyle = '#E5E7EB';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Total', centerX, centerY - 15);
-      
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillStyle = '#3B82F6';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(total.toString(), centerX, centerY + 15);
-      ctx.restore();
+// Define our custom chart options type that extends Chart.js options
+type CustomDoughnutChartOptions = Omit<ChartOptions<'doughnut'>, 'plugins'> & {
+  cutout?: string | number;
+  radius?: string | number;
+  plugins?: {
+    legend?: {
+      display?: boolean;
+      position?: 'top' | 'left' | 'right' | 'bottom' | 'chartArea' | 'center';
+      labels?: {
+        color?: string;
+        font?: {
+          size?: number;
+          weight?: string | number;
+          family?: string;
+        };
+        padding?: number;
+        usePointStyle?: boolean;
+        pointStyle?: string | CanvasImageSource;
+        boxWidth?: number;
+        boxHeight?: number;
+        generateLabels?: (chart: ChartJS) => Array<{
+          text: string;
+          fillStyle: string;
+          strokeStyle: string;
+          lineWidth: number;
+          hidden: boolean;
+          index: number;
+        }>;
+      };
+      onClick?: (e: MouseEvent, legendItem: any, legend: any) => void;
+    };
+    tooltip?: {
+      enabled?: boolean;
+      backgroundColor?: string;
+      titleColor?: string;
+      bodyColor?: string;
+      bodyFont?: {
+        size?: number;
+        weight?: string | number;
+        family?: string;
+      };
+      padding?: number;
+      displayColors?: boolean;
+      usePointStyle?: boolean;
+      callbacks?: {
+        label?: (context: any) => string | string[];
+      };
+    };
+    datalabels?: {
+      formatter?: (value: number, context: any) => string | null;
+      color?: string | ((context: any) => string);
+      font?: {
+        weight?: string | number | ((context: any) => string | number);
+        size?: number | ((context: any) => number);
+        family?: string | ((context: any) => string);
+      };
+      textAlign?: CanvasTextAlign | ((context: any) => CanvasTextAlign);
+      textStrokeColor?: string | ((context: any) => string);
+      textStrokeWidth?: number | ((context: any) => number);
+      textShadowBlur?: number | ((context: any) => number);
+      textShadowColor?: string | ((context: any) => string);
+      display?: boolean | ((context: any) => boolean);
+    };
+  };
+      arc?: {
+        borderWidth?: number;
+      borderColor?: string;
+      backgroundColor?: string;
+    };
+  // Remove the extra closing brace on this line
+  animation?: {
+    animateRotate?: boolean;
+    animateScale?: boolean;
+  };
+  circumference?: number;
+  rotation?: number;
+  onHover?: (event: MouseEvent, elements: any[], chart: ChartJS) => void;
+  onClick?: (event: MouseEvent, elements: any[], chart: ChartJS) => void;
+  elements?: {
+    arc?: {
+      borderWidth?: number;
+      borderColor?: string;
+      backgroundColor?: string;
     }
   }
+};    
+
+// Define the 3D effect plugin
+const threeDEffectPlugin = {
+  id: '3d',
+  beforeDraw: function(chart: ChartJS) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    
+    const { top, bottom, left, right, width, height } = chartArea;
+    
+    // Draw 3D shadow effect
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    const r = Math.min(width, height) * 0.4;
+    
+    // Shadow gradient
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, r);
+    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.1)');
+    gradient.addColorStop(0.7, 'rgba(0, 0, 0, 0)');
+    
+    ctx.save();
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY + 10, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+};
+
+// Define the center text plugin
+const centerTextPlugin = {
+  id: 'centerText',
+  afterDraw: function(chart: ChartJS) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    
+    const { top, bottom, left, right } = chartArea;
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    
+    // Draw center text
+    ctx.save();
+    ctx.font = 'bold 16px Arial';
+    ctx.fillStyle = '#4B5563';
+    ctx.textAlign = 'center' as CanvasTextAlign;
+    ctx.textBaseline = 'middle' as CanvasTextBaseline;
+    ctx.fillText('Code', centerX, centerY - 10);
+    ctx.font = '14px Arial';
+    ctx.fillText('Distribution', centerX, centerY + 10);
+    ctx.restore();
+  }
+};
+
+// Inner glow plugin
+const innerGlowPlugin = {
+  id: 'innerGlow',
+  beforeDraw: function(chart: ChartJS) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    
+    const { top, bottom, left, right } = chartArea;
+    const centerX = (left + right) / 2;
+    const centerY = (top + bottom) / 2;
+    const r = Math.min(chartArea.width, chartArea.height) * 0.4 * 0.7; // 70% of the chart radius
+    
+    // Draw inner glow
+    ctx.save();
+    ctx.shadowColor = 'rgba(255, 255, 255, 0.3)';
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetX = -5;
+    ctx.shadowOffsetY = 5;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fill();
+    ctx.restore();
+  }
+};
+
+const customPlugins: Plugin<'doughnut'>[] = [
+  threeDEffectPlugin,
+  centerTextPlugin,
+  innerGlowPlugin
 ];
 
 // Register custom plugins
-const registerCustomPlugins = () => {
+function registerCustomPlugins() {
   customPlugins.forEach(plugin => {
-    ChartJS.register(plugin);
+    if (!ChartJS.registry.plugins.get(plugin.id)) {
+      ChartJS.register({
+        id: plugin.id,
+        beforeDraw: plugin.beforeDraw,
+        afterDraw: plugin.afterDraw
+      });
+    }
   });
-};
+}
 
-// Call the function to register plugins
 registerCustomPlugins();
 
 export default function Home() {
+  // State hooks
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -134,6 +239,14 @@ export default function Home() {
   const [languages, setLanguages] = useState<{[key: string]: number}>({});
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [errorRepos, setErrorRepos] = useState<string | null>(null);
+  
+  // Animation hooks - moved to top level to ensure consistent hook ordering
+  const { scrollYProgress } = useScroll();
+  const y = useTransform(scrollYProgress, [0, 1], [0, 100]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.05]);
+  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.4], [1, 0.5, 0]);
+  const springConfig = { stiffness: 100, damping: 30, restDelta: 0.001 };
+  const ySpring = useSpring(y, springConfig);
   
   // Check authentication status on component mount
   useEffect(() => {
@@ -277,14 +390,6 @@ export default function Home() {
       </div>
     );
   }
-
-  // Scroll progress for parallax effect - Moved to top level
-  const { scrollYProgress } = useScroll();
-  const y = useTransform(scrollYProgress, [0, 1], [0, 100]);
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 1.05]);
-  const opacity = useTransform(scrollYProgress, [0, 0.2, 0.4], [1, 0.5, 0]);
-  const springConfig = { stiffness: 100, damping: 30, restDelta: 0.001 };
-  const ySpring = useSpring(y, springConfig);
 
   // Error state
   if (error) {
@@ -615,145 +720,203 @@ export default function Home() {
             </h2>
           </FadeIn>
           
-          {/* Language Distribution Pie Chart */}
+          {/* Enhanced Code Distribution Section */}
           <div className="w-full p-4">
-            <div className="bg-gray-800 rounded-lg p-6 h-full transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-1">
-              <div className="flex justify-between items-center mb-4">
-                <FadeIn delay={0.2}>
-                <motion.h3 
-                  className="text-xl font-semibold text-blue-400"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                >
-                  Code Distribution
-                </motion.h3>
-                </FadeIn>
+            <motion.div 
+              className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 h-full transition-all duration-500 hover:shadow-2xl hover:shadow-blue-500/20 hover:-translate-y-1 border border-gray-700/50"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                <div>
+                  <FadeIn delay={0.2}>
+                    <motion.h3 
+                      className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                    >
+                      Code Distribution
+                    </motion.h3>
+                    <motion.p 
+                      className="text-sm text-gray-400 mt-1"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.5, delay: 0.4 }}
+                    >
+                      Language breakdown across my projects
+                    </motion.p>
+                  </FadeIn>
+                </div>
+                
                 <FadeIn delay={0.4}>
-                <motion.div 
-                  className="text-sm text-gray-400"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                >
-                  {Object.keys(languages).length > 0 && (
-                    <span>Total: {Object.values(languages).reduce((a, b) => a + b, 0)} files</span>
-                  )}
-                </motion.div>
+                  <motion.div 
+                    className="mt-4 md:mt-0 px-4 py-2 bg-gray-800/50 backdrop-blur-sm rounded-full border border-gray-700/50"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                  >
+                    {Object.keys(languages).length > 0 && (
+                      <span className="text-sm font-medium text-gray-300">
+                        Total: <span className="text-blue-400">{Object.values(languages).reduce((a, b) => a + b, 0)}</span> files
+                      </span>
+                    )}
+                  </motion.div>
                 </FadeIn>
               </div>
               
-              <div className="relative h-96">
+              <div className="relative h-[400px] md:h-[450px]">
                 {loadingRepos ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                  <div className="flex flex-col items-center justify-center h-full space-y-4">
+                    <div className="animate-spin rounded-full h-14 w-14 border-t-2 border-b-2 border-blue-500"></div>
+                    <p className="text-gray-400 text-sm">Analyzing codebase...</p>
                   </div>
                 ) : errorRepos ? (
-                  <div className="text-red-500 text-center py-8">{errorRepos}</div>
+                  <div className="flex flex-col items-center justify-center h-full text-center p-6 bg-red-900/20 rounded-xl">
+                    <div className="text-red-400 text-4xl mb-3">⚠️</div>
+                    <p className="text-red-400 font-medium">Failed to load repository data</p>
+                    <p className="text-red-300 text-sm mt-1">{errorRepos}</p>
+                  </div>
                 ) : Object.keys(languages).length > 0 ? (
                   <div className="w-full h-full relative group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    <Pie 
-                      data={{
-                        labels: Object.keys(languages),
-                        datasets: [
-                          {
-                            data: Object.values(languages),
-                            backgroundColor: [
-                              'rgba(59, 130, 246, 0.9)', // blue-500
-                              'rgba(16, 185, 129, 0.9)', // emerald-500
-                              'rgba(245, 158, 11, 0.9)', // amber-500
-                              'rgba(139, 92, 246, 0.9)', // violet-500
-                              'rgba(236, 72, 153, 0.9)', // pink-500
-                            ],
-                            borderColor: [
-                              'rgba(59, 130, 246, 1)',
-                              'rgba(16, 185, 129, 1)',
-                              'rgba(245, 158, 11, 1)',
-                              'rgba(236, 72, 153, 1)',
-                              'rgba(139, 92, 246, 1)',
-                              'rgba(20, 184, 166, 1)',
-                            ],
-                            borderWidth: 2,
-                            hoverOffset: 20,
-                            borderRadius: 8,
-                            spacing: 3,
-                            weight: 1,
-                          },
-                        ],
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                          legend: {
-                            position: 'right',
-                            labels: {
-                              color: '#E5E7EB',
-                              padding: 16,
-                              font: {
-                                size: 14,
-                                family: 'Inter, sans-serif',
-                                weight: '500',
+                    {/* Animated background gradient */}
+                    <motion.div 
+                      className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-all duration-700"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.1 }}
+                      whileHover={{ opacity: 0.2 }}
+                    />
+                    
+                    {/* Glow effect */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-purple-500/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    
+                    {/* Main chart container */}
+                    <div className="relative h-full w-full flex flex-col md:flex-row items-center justify-center gap-8 p-4">
+                      {/* Chart */}
+                      <div className="w-full md:w-1/2 h-64 md:h-full">
+                        <Doughnut 
+                          data={{
+                            labels: Object.keys(languages),
+                            datasets: [
+                              {
+                                data: Object.values(languages) as number[],
+                                backgroundColor: [
+                                  'rgba(255, 99, 132, 0.7)',
+                                  'rgba(54, 162, 235, 0.7)',
+                                  'rgba(255, 206, 86, 0.7)',
+                                  'rgba(75, 192, 192, 0.7)',
+                                  'rgba(153, 102, 255, 0.7)',
+                                  'rgba(255, 159, 64, 0.7)'
+                                ],
+                                borderColor: [
+                                  'rgba(255, 99, 132, 1)',
+                                  'rgba(54, 162, 235, 1)',
+                                  'rgba(255, 206, 86, 1)',
+                                  'rgba(75, 192, 192, 1)',
+                                  'rgba(153, 102, 255, 1)',
+                                  'rgba(255, 159, 64, 1)'
+                                ],
+                                borderWidth: 1,
+                                hoverOffset: 15
+                              }
+                            ]
+                          }}
+                          options={{
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            cutout: '70%',
+                            plugins: {
+                              legend: {
+                                position: 'bottom',
+                                labels: {
+                                  color: '#4B5563',
+                                  font: {
+                                    size: 12,
+                                    family: '"Inter", sans-serif',
+                                    weight: 500
+                                  },
+                                  usePointStyle: true,
+                                  padding: 20,
+                                  pointStyle: 'circle',
+                                  boxWidth: 8,
+                                  boxHeight: 8,
+                                  generateLabels: (chart) => {
+                                    const data = chart.data;
+                                    if (data.labels && data.datasets && data.datasets[0]) {
+                                      return data.labels.map((label: string, i: number) => {
+                                        const dataset = data.datasets[0];
+                                        const backgroundColor = Array.isArray(dataset.backgroundColor)
+                                          ? dataset.backgroundColor[i % dataset.backgroundColor.length]
+                                          : dataset.backgroundColor || '#000000';
+                                        const value = dataset.data[i] || 0;
+                                        
+                                        return {
+                                          text: `${label} - ${value}%`,
+                                          fillStyle: backgroundColor as string,
+                                          strokeStyle: backgroundColor as string,
+                                          lineWidth: 1,
+                                          hidden: !chart.getDataVisibility(i),
+                                          index: i,
+                                          datasetIndex: 0
+                                        };
+                                      });
+                                    }
+                                    return [];
+                                  }
+                                },
+                                onClick: (e: MouseEvent, legendItem: any, legend: any) => {
+                                  const index = legendItem.datasetIndex;
+                                  const chart = legend.chart;
+                                  const meta = chart.getDatasetMeta(0);
+                                  
+                                  if (meta.data && index >= 0 && index < meta.data.length) {
+                                    const item = meta.data[index];
+                                    if (item) {
+                                      item.hidden = !item.hidden;
+                                      chart.update();
+                                    }
+                                  }
+                                }
                               },
-                              usePointStyle: true,
-                              pointStyle: 'circle',
-                              boxWidth: 8,
-                              boxHeight: 8,
-                            },
-                          },
-                          tooltip: {
-                            backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                            titleColor: '#F3F4F6',
-                            bodyColor: '#E5E7EB',
-                            titleFont: {
-                              size: 14,
-                              weight: 'bold',
-                              family: 'Inter, sans-serif',
-                            },
-                            bodyFont: {
-                              size: 13,
-                              family: 'Inter, sans-serif',
-                            },
-                            borderColor: 'rgba(75, 85, 99, 0.5)',
-                            borderWidth: 1,
-                            padding: 12,
-                            displayColors: true,
-                            usePointStyle: true,
-                            callbacks: {
-                              label: function(context: any) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                                const percentage = Math.round((value / total) * 100);
-                                return `${label}: ${value} files (${percentage}%)`;
+                              tooltip: {
+                                enabled: true,
+                                backgroundColor: 'rgba(31, 41, 55, 0.9)',
+                                titleColor: '#F9FAFB',
+                                bodyColor: '#E5E7EB',
+                                borderColor: 'rgba(75, 85, 99, 0.5)',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: true,
+                                usePointStyle: true,
+                                callbacks: {
+                                  label: (context: any) => {
+                                    const label = context.label || '';
+                                    const value = context.raw as number;
+                                    const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value}% (${percentage}% of total)`;
+                                  }
+                                }
                               },
-                              labelColor: function(context: any) {
-                                return {
-                                  borderColor: 'transparent',
-                                  backgroundColor: context.dataset.backgroundColor[context.dataIndex],
-                                  borderRadius: 2,
-                                };
-                              },
+                              datalabels: {
+                                color: '#1F2937',
+                                font: {
+                                  weight: 600,
+                                  size: 12,
+                                  family: '"Inter", sans-serif'
+                                },
+                                formatter: (value: number) => {
+                                  return `${value}%`;
+                                },
+                                textAlign: 'center' as CanvasTextAlign,
+                                textStrokeColor: 'white',
+                                textStrokeWidth: 3,
+                                textShadowBlur: 10,
+                                textShadowColor: 'rgba(0, 0, 0, 0.5)'
+                              }
                             },
-                          },
-                          datalabels: {
-                            formatter: (value: number, context: any) => {
-                              const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                              const percentage = Math.round((value / total) * 100);
-                              return percentage >= 5 ? `${percentage}%` : '';
-                            },
-                            color: '#F9FAFB',
-                            font: {
-                              weight: 'bold',
-                              size: 13,
-                              family: 'Inter, sans-serif',
-                            },
-                            textAlign: 'center',
-                            textShadowBlur: 8,
-                            textShadowColor: 'rgba(0, 0, 0, 0.8)',
-                            textStrokeColor: 'rgba(0, 0, 0, 0.5)',
-                            textStrokeWidth: 1,
                           },
                         },
                         cutout: '65%',
@@ -781,38 +944,23 @@ export default function Home() {
                           chart.setActiveElements([]);
                           chart.update();
                         },
-                        onClick: (event: ChartEvent, elements: any[]) => {
-                          if (elements?.[0]) {
-                            const { datasetIndex = 0, index = 0 } = elements[0];
-                            const chart = (event.native?.target as any)?.chart;
-                            if (!chart) return;
-                            
-                            const meta = chart.getDatasetMeta(datasetIndex);
-                            if (!meta?.data?.[index]) return;
-                            
-                            const chartElement = meta.data[index] as any;
-                            chartElement.hidden = chartElement.hidden === null 
-                              ? !chart.getDataVisibility(index) 
-                              : null;
-                            chart.update();
-                          }
-                        },
                         plugins: {
                           legend: {
-                            position: 'right',
+                            position: 'right' as const,
                             labels: {
                               color: '#E5E7EB',
                               padding: 16,
                               font: {
                                 size: 14,
                                 family: 'Inter, sans-serif',
-                                weight: 500,
+                                weight: 'normal' as const,
                               },
                               usePointStyle: true,
-                              pointStyle: 'circle',
+                              pointStyle: 'circle' as const,
                               boxWidth: 8,
-                              boxHeight: 8,
-                            }
+                              boxHeight: 8
+                            },
+                            onClick: (e: ChartEvent, legendItem: any, legend: any) => {
                               const index = legendItem?.datasetIndex ?? 0;
                               const chart = legend?.chart;
                               if (!chart) return;
@@ -882,13 +1030,53 @@ export default function Home() {
                           }
                         }
                       }}
-                      plugins={[customPlugins[1]]}
+                      plugins={[{
+                        id: 'doughnutLabel',
+                        afterDraw: (chart: ChartJS) => {
+                          const { ctx, chartArea } = chart;
+                          if (!chartArea) return;
+                          
+                          const { top, bottom, left, right } = chartArea;
+                          
+                          // Draw total in center
+                          const total = chart.data.datasets[0]?.data?.reduce<number>((a: number, b: number) => a + b, 0) || 0;
+                          const centerX = (left + right) / 2;
+                          const centerY = (top + bottom) / 2;
+                          
+                          // Draw outer circle
+                          ctx.save();
+                          ctx.beginPath();
+                          ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
+                          ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+                          ctx.fill();
+                          
+                          // Add inner glow
+                          const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 50);
+                          gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+                          gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+                          
+                          ctx.beginPath();
+                          ctx.arc(centerX, centerY, 50, 0, Math.PI * 2);
+                          ctx.fillStyle = gradient;
+                          ctx.fill();
+                          
+                          // Draw total text
+                          ctx.font = 'bold 16px "Inter", sans-serif';
+                          ctx.fillStyle = '#E5E7EB';
+                          ctx.textAlign = 'center' as CanvasTextAlign;
+                          ctx.textBaseline = 'middle' as CanvasTextBaseline;
+                          ctx.fillText('Total', centerX, centerY - 15);
+                          
+                          ctx.font = 'bold 24px "Inter", sans-serif';
+                          ctx.fillStyle = '#3B82F6';
+                          ctx.textBaseline = 'middle' as CanvasTextBaseline;
+                          ctx.fillText(total.toString(), centerX, centerY + 15);
+                          ctx.restore();
+                        }
+                      }]}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="text-center">
-                        <p className="text-gray-400 text-sm font-medium">Click to toggle</p>
-                        <p className="text-gray-500 text-xs mt-1">or hover for details</p>
-                      </div>
+                    <div className="absolute inset-0 pointer-events-none">
+                      {/* Empty div to maintain layout */}
                     </div>
                   </div>
                 ) : (
@@ -904,7 +1092,7 @@ export default function Home() {
                 transition={{ duration: 0.8, delay: 1 }}
               >
                 <p className="text-sm text-gray-400">
-                  Click on a segment to toggle visibility | Click and drag to rotate
+                 
                 </p>
               </motion.div>
               </FadeIn>
@@ -972,83 +1160,6 @@ export default function Home() {
                 No repositories found
               </div>
             )}
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-gray-800 relative overflow-hidden">
-        <motion.div 
-          className="absolute inset-0 bg-gradient-to-br from-blue-900/10 to-purple-900/10"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-        />
-        
-        <div className="container mx-auto px-6 relative z-10">
-          <FadeIn>
-            <h2 className="text-3xl font-bold text-center mb-12">
-              Get In <span className="text-blue-400">Touch</span>
-            </h2>
-          </FadeIn>
-          <div className="max-w-2xl mx-auto">
-            <form className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">Name</label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Your name"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">Email</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="your.email@example.com"
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-300 mb-1">Subject</label>
-                <input
-                  type="text"
-                  id="subject"
-                  name="subject"
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="How can I help you?"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="message" className="block text-sm font-medium text-gray-300 mb-1">Message</label>
-                <textarea
-                  id="message"
-                  name="message"
-                  rows={4}
-                  className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Your message here..."
-                  required
-                ></textarea>
-              </div>
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
-                >
-                  Send Message
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       </section>
