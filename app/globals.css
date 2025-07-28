@@ -2,6 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Holographic effects */
+.holographic-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.holographic-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(138, 43, 226, 0.15), transparent 25%),
+    radial-gradient(circle at 80% 80%, rgba(0, 191, 255, 0.15), transparent 25%),
+    radial-gradient(circle at 50% 50%, rgba(0, 250, 154, 0.1), transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+  animation: holographicPulse 8s ease-in-out infinite;
+}
+
+@keyframes holographicPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
+/* Chart container styles */
+.chart-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Glow effect for chart */
+.chart-glow {
+  filter: 
+    drop-shadow(0 0 10px rgba(138, 43, 226, 0.5))
+    drop-shadow(0 0 20px rgba(0, 191, 255, 0.3))
+    drop-shadow(0 0 30px rgba(0, 250, 154, 0.2));
+  transition: filter 0.3s ease;
+}
+
+.chart-glow:hover {
+  filter: 
+    drop-shadow(0 0 15px rgba(138, 43, 226, 0.7))
+    drop-shadow(0 0 30px rgba(0, 191, 255, 0.5))
+    drop-shadow(0 0 45px rgba(0, 250, 154, 0.3));
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;

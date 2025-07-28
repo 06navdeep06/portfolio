@@ -1,38 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { FiGithub, FiLinkedin, FiMail, FiExternalLink, FiStar, FiGitBranch } from 'react-icons/fi';
+import Head from 'next/head';
+import SimplePieChart from '@/components/SimplePieChart';
+import { StaggeredContainer } from '@/components/StaggeredContainer';
+import { ScrollAnimation, StaggeredItem, FadeIn } from '@/components/animations/ScrollAnimation';
+import ContactForm from '@/components/ContactForm';
+import { FiGithub, FiExternalLink, FiStar, FiGitBranch, FiMail } from 'react-icons/fi';
 import { FaInstagram } from 'react-icons/fa';
-import ContactForm from '../components/ContactForm';
-import { ScrollAnimation, FadeIn, StaggeredContainer, StaggeredItem } from '../components/animations/ScrollAnimation';
-import { Pie } from 'react-chartjs-2';
-import { Chart, ArcElement, Tooltip, Legend } from 'chart.js';
 
-Chart.register(ArcElement, Tooltip, Legend);
-
-interface Repository {
+type Repository = {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   url: string;
-  primaryLanguage?: {
+  primaryLanguage: {
     name: string;
     color: string;
-  };
+  } | null;
   stargazerCount: number;
   forkCount: number;
-}
+};
 
-interface GitHubResponse {
-  data: {
-    user: {
-      pinnedItems: {
-        nodes: Repository[];
+type GitHubResponse = {
+  data?: {
+    user?: {
+      pinnedItems?: {
+        nodes?: Repository[];
       };
     };
   };
-}
+};
 
 const skills = [
   { name: 'JavaScript', level: 90, color: '#F7DF1E' },
@@ -49,38 +48,81 @@ export default function Home() {
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showFallback, setShowFallback] = useState(false);
+  const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
-  useEffect(() => {
-    const fetchRepositories = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/github');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data: GitHubResponse = await response.json();
-        
-        if (data.data?.user?.pinnedItems?.nodes) {
-          setRepositories(data.data.user.pinnedItems.nodes);
-        }
-      } catch (err) {
-        console.warn('Error fetching repositories:', err);
-        setError('Unable to load live GitHub data, showing sample projects');
-      } finally {
-        setLoading(false);
+  const fetchRepositories = useCallback(async (force = false) => {
+    // Don't refetch if we already have data and not forced
+    if (repositories.length > 0 && !force) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log('Fetching repositories from pinned-repos API...');
+      const response = await fetch(`/api/pinned-repos?t=${Date.now()}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `API request failed with status ${response.status}`);
       }
-    };
+      
+      const result = await response.json();
+      
+      // Extract repositories from the response
+      const repos = result?.data?.user?.pinnedItems?.nodes || [];
+      
+      console.log(`Found ${repos.length} pinned repositories`);
+      setRepositories(repos);
+      setLastFetched(new Date());
+      
+      if (repos.length === 0) {
+        setError('No pinned repositories found. Please pin some repositories on your GitHub profile.');
+      }
+    } catch (err) {
+      console.error('Error fetching repositories:', err);
+      setError(
+        'Failed to load repositories. ' +
+        'This could be due to rate limiting or network issues. ' +
+        'Showing sample projects instead.'
+      );
+      setShowFallback(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [repositories.length]);
 
+  // Initial fetch on component mount
+  useEffect(() => {
     fetchRepositories();
-  }, []);
+  }, [fetchRepositories]);
+
+  // Refresh data every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchRepositories(true);
+    }, 5 * 60 * 1000); // 5 minutes
+    
+    return () => clearInterval(interval);
+  }, [fetchRepositories]);
+
+  // Skills data for the pie chart
+  const skillsData = [
+    { label: 'Python', value: 35, color: 'rgba(110, 231, 255, 0.8)' },
+    { label: 'JavaScript', value: 25, color: 'rgba(167, 139, 250, 0.8)' },
+    { label: 'TypeScript', value: 15, color: 'rgba(244, 114, 182, 0.8)' },
+    { label: 'React', value: 12, color: 'rgba(99, 102, 241, 0.8)' },
+    { label: 'Node.js', value: 8, color: 'rgba(59, 130, 246, 0.8)' },
+    { label: 'CSS/HTML', value: 5, color: 'rgba(139, 92, 246, 0.8)' }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20" />
         <div className="relative z-10 text-center max-w-4xl mx-auto">
           <FadeIn>
             <motion.div
@@ -197,106 +239,17 @@ export default function Home() {
               </div>
             </ScrollAnimation>
 
-<ScrollAnimation direction="right">
-  <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-    <h3 className="text-2xl font-bold text-white mb-6">Skills & Expertise</h3>
-    <div className="flex flex-col items-center">
-      <div className="relative">
-        <Pie
-          data={{
-            labels: ['Python', 'JavaScript', 'TypeScript', 'React', 'Node.js'],
-            datasets: [
-              {
-                data: [55, 15, 12, 10, 8],
-                backgroundColor: [
-                  'radial-gradient(circle at 60% 40%, #6ee7ff 0%, #3776AB 100%)', // Python
-                  'radial-gradient(circle at 60% 40%, #fffbe6 0%, #F7DF1E 100%)', // JS
-                  'radial-gradient(circle at 60% 40%, #b3dafe 0%, #3178C6 100%)', // TS
-                  'radial-gradient(circle at 60% 40%, #e0f7fa 0%, #61DAFB 100%)', // React
-                  'radial-gradient(circle at 60% 40%, #a8ffce 0%, #339933 100%)', // Node
-                ],
-                borderColor: [
-                  '#6ee7ff', '#fffbe6', '#b3dafe', '#e0f7fa', '#a8ffce'
-                ],
-                borderWidth: 4,
-                hoverBorderColor: [
-                  '#fff', '#fff', '#fff', '#fff', '#fff'
-                ],
-                hoverOffset: 16,
-                shadowOffsetX: 0,
-                shadowOffsetY: 0,
-                shadowBlur: 30,
-                shadowColor: 'rgba(0,255,255,0.5)',
-              },
-            ],
-          }}
-          options={{
-            plugins: {
-              legend: {
-                labels: {
-                  color: '#fff',
-                  font: { size: 16, weight: 'bold' },
-                  boxWidth: 24,
-                  boxHeight: 24,
-                  padding: 20,
-                  generateLabels: (chart) => {
-                    const data = chart.data;
-                    return data.labels.map((label, i) => ({
-                      text: label,
-                      fillStyle: data.datasets[0].backgroundColor[i],
-                      strokeStyle: '#fff',
-                      lineWidth: 2,
-                      hidden: false,
-                      index: i
-                    }));
-                  }
-                },
-                position: 'bottom',
-              },
-              tooltip: {
-                backgroundColor: 'rgba(30,41,59,0.95)',
-                titleColor: '#fff',
-                bodyColor: '#6ee7ff',
-                borderColor: '#6ee7ff',
-                borderWidth: 2,
-                padding: 16,
-                caretSize: 8,
-                cornerRadius: 8,
-                displayColors: false,
-              },
-            },
-            layout: {
-              padding: 24,
-            },
-            animation: {
-              animateRotate: true,
-              animateScale: true,
-              duration: 1800,
-              easing: 'easeInOutQuart',
-            },
-            cutout: '40%',
-            responsive: true,
-            plugins: {
-              datalabels: false,
-            },
-          }}
-          width={260}
-          height={260}
-        />
-        {/* Holographic Glow Overlay */}
-        <div className="absolute inset-0 pointer-events-none rounded-full" style={{
-          boxShadow: '0 0 60px 10px #6ee7ff, 0 0 120px 40px #a78bfa, 0 0 200px 80px #f472b6',
-          zIndex: 1,
-        }} />
-      </div>
-      <div className="mt-6 text-cyan-200 text-center text-sm drop-shadow-glow">
-        <p>
-          Python is my most dominant language, followed by JavaScript, TypeScript, React, and Node.js.
-        </p>
-      </div>
-    </div>
-  </div>
-</ScrollAnimation>
+            <ScrollAnimation direction="right">
+              <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 sm:p-8 border border-gray-700">
+                <h3 className="text-2xl font-bold text-white mb-6">Skills & Expertise</h3>
+                <div className="w-full h-[500px] sm:h-[600px] md:h-[700px] lg:h-[500px]">
+                  <SimplePieChart 
+                    data={skillsData}
+                    className="w-full h-full"
+                  />
+                </div>
+              </div>
+            </ScrollAnimation>
           </div>
         </div>
       </section>
@@ -310,16 +263,58 @@ export default function Home() {
             </h2>
           </ScrollAnimation>
 
-          {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-            </div>
-          ) : error ? (
-            <div className="text-center py-20">
-              <p className="text-red-400 mb-4">Error loading projects: {error}</p>
-              <p className="text-gray-400">Showing fallback projects below</p>
-            </div>
-          ) : null}
+          <div className="space-y-8">
+            {loading && repositories.length === 0 ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : error ? (
+              <div className="text-center py-8 bg-gray-800/30 rounded-lg p-6">
+                <p className="text-red-400 mb-4">
+                  <span className="font-semibold">Error:</span> {error}
+                </p>
+                {showFallback && (
+                  <p className="text-yellow-400 mb-4">
+                    Showing fallback projects. To see your real GitHub repositories, please add a valid GITHUB_TOKEN to your environment variables.
+                  </p>
+                )}
+                <button
+                  onClick={() => fetchRepositories(true)}
+                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                  disabled={loading}
+                >
+                  {loading ? 'Refreshing...' : 'Try Again'}
+                </button>
+              </div>
+            ) : repositories.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-gray-400">
+                  No pinned repositories found. Please pin some repositories on your 
+                  <a 
+                    href="https://github.com/settings/pinned" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline ml-1"
+                  >
+                    GitHub profile
+                  </a>.
+                </p>
+                <button
+                  onClick={() => fetchRepositories(true)}
+                  className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                  disabled={loading}
+                >
+                  {loading ? 'Checking...' : 'Check Again'}
+                </button>
+              </div>
+            ) : null}
+            
+            {lastFetched && (
+              <div className="text-right text-xs text-gray-500">
+                Last updated: {lastFetched.toLocaleTimeString()}
+              </div>
+            )}
+          </div>
 
           <StaggeredContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {repositories.map((repo) => (
