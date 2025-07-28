@@ -6,16 +6,16 @@ import { motion } from 'framer-motion';
 
 const skillsData = {
   labels: [
-    'Frontend', 
     'Backend', 
+    'Frontend', 
     'DevOps', 
     'UI/UX', 
     'Other'
   ],
-  values: [35, 30, 20, 10, 5],
+  values: [50, 25, 15, 7, 3],
   descriptions: [
+    'Python, Node.js, Express, REST APIs, GraphQL',
     'React, Next.js, TypeScript, Tailwind CSS, Redux',
-    'Node.js, Express, Python, REST APIs, GraphQL',
     'Docker, AWS, CI/CD, GitHub Actions, Vercel',
     'Figma, Framer Motion, Responsive Design, Accessibility',
     'Project Management, Agile, Git, Testing'
@@ -36,9 +36,9 @@ const skillCategories = [
   {
     name: 'Backend',
     skills: [
+      { name: 'Python', level: 95 },
       { name: 'Node.js', level: 90 },
       { name: 'Express', level: 85 },
-      { name: 'Python', level: 80 },
       { name: 'REST APIs', level: 92 },
       { name: 'GraphQL', level: 78 },
     ]

@@ -7,7 +7,13 @@ module.exports = {
   ],
   theme: {
     extend: {
+      borderColor: {
+        DEFAULT: 'hsl(var(--border) / <alpha-value>)',
+      },
       fontFamily: {
+        sans: ['var(--font-inter)', ...fontFamily.sans],
+        serif: ['var(--font-cinzel)', ...fontFamily.serif],
+        japanese: ['var(--font-noto-sans-jp)', 'sans-serif'],
       },
       colors: {
         primary: {
@@ -25,6 +31,19 @@ module.exports = {
           light: '#334155',
           lighter: '#64748b',
         },
+        // Samurai Theme Colors
+        'primary-black': '#0a0a0a',
+        'primary-red': '#e63946',
+        'primary-gold': '#d4af37',
+        'sakura-pink': '#ffb7c5',
+        'bamboo-green': '#3a5f0b',
+        'paper-beige': '#f5f5f0',
+        'ink-black': '#1a1a1a',
+        'gold-light': '#f4e5c2',
+        'red-dark': '#8b0000',
+        'gray-samurai': '#2d2d2d',
+        'gray-light': '#e5e7eb',
+        'gray-dark': '#1f2937',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

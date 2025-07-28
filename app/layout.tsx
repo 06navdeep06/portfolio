@@ -1,9 +1,38 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Noto_Sans_JP, Cinzel } from 'next/font/google';
 import Head from 'next/head';
+import dynamic from 'next/dynamic';
 import './globals.css';
+import GlobalStyles from '@/components/GlobalStyles';
 
-const inter = Inter({ subsets: ['latin'] });
+// Import cursor components with no SSR
+const SamuraiCursor2 = dynamic(() => import('@/components/SamuraiCursor2'), {
+  ssr: false,
+});
+
+const CursorStyles = dynamic(() => import('@/components/CursorStyles'), {
+  ssr: false,
+});
+
+// Fonts
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap'
+});
+
+const notoSansJP = Noto_Sans_JP({ 
+  subsets: ['latin'],
+  variable: '--font-noto-sans-jp',
+  display: 'swap'
+});
+
+const cinzel = Cinzel({
+  subsets: ['latin'],
+  variable: '--font-cinzel',
+  display: 'swap'
+});
 
 export const metadata: Metadata = {
   title: 'Navdeep - Portfolio',
@@ -40,8 +69,11 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
       </Head>
-      <body className={`${inter.className} bg-gradient-to-br from-gray-900 to-gray-800 text-white`}>
+      <body className={`${inter.variable} ${notoSansJP.variable} ${cinzel.variable} font-sans bg-primary-black text-white min-h-screen overflow-x-hidden antialiased`}>
+        <CursorStyles />
+        <SamuraiCursor2 />
         {children}
+        <GlobalStyles />
       </body>
     </html>
   );

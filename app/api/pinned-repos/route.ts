@@ -88,16 +88,19 @@ export async function GET() {
     const data: GitHubResponse = await response.json();
     
     // Log the response for debugging
-    console.log('GitHub API Response:', {
+    console.log('GitHub API Response:', JSON.stringify({
       hasData: !!data?.data,
       hasUser: !!data?.data?.user,
       hasPinnedItems: !!data?.data?.user?.pinnedItems,
-      repoCount: data?.data?.user?.pinnedItems?.nodes?.length || 0
-    });
+      repoCount: data?.data?.user?.pinnedItems?.nodes?.length || 0,
+      firstRepo: data?.data?.user?.pinnedItems?.nodes?.[0] || null
+    }, null, 2));
     
     // Return the repositories or empty array if none found
     const repos = data?.data?.user?.pinnedItems?.nodes || [];
     console.log(`Found ${repos.length} pinned repositories`);
+    
+    // Return a simplified response that matches our frontend expectations
     return NextResponse.json({ 
       data: { 
         user: { 
@@ -105,7 +108,9 @@ export async function GET() {
             nodes: repos 
           } 
         } 
-      } 
+      },
+      success: true,
+      timestamp: new Date().toISOString()
     });
     
   } catch (error) {

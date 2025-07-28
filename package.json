@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@fontsource/cinzel": "^5.2.6",
+    "@fontsource/noto-sans-jp": "^5.2.6",
     "@nivo/pie": "^0.99.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/chart.js": "^2.9.41",
